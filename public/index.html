@@ -195,7 +195,7 @@ textarea{resize:vertical;min-height:130px}
     <div class="checklist">
       <div class="check-item"><span class="check-icon">✎</span><span class="check-label">Script (input/script.txt)</span><span class="badge badge-miss" id="ck-script">Missing</span></div>
       <div class="check-item"><span class="check-icon">♪</span><span class="check-label">Voiceover audio (generated or uploaded)</span><span class="badge badge-miss" id="ck-audio">Missing</span></div>
-      <div class="check-item"><span class="check-icon">⚙</span><span class="check-label">Ollama running locally</span><span class="badge badge-miss" id="ck-ollama">Checking...</span></div>
+      <div class="check-item"><span class="check-icon">⚙</span><span class="check-label" id="ck-ai-label">AI Provider</span><span class="badge badge-miss" id="ck-ollama">Checking...</span></div>
       <div class="check-item"><span class="check-icon">▶</span><span class="check-label">Storyboard generated</span><span class="badge badge-miss" id="ck-story">Not yet</span></div>
       <div class="check-item"><span class="check-icon">🎬</span><span class="check-label">YouTube Video (1920x1080)</span><span class="badge badge-miss" id="ck-video">Not yet</span></div>
       <div class="check-item"><span class="check-icon">📱</span><span class="check-label">YouTube Shorts (1080x1920)</span><span class="badge badge-miss" id="ck-shorts">Not yet</span></div>
@@ -286,35 +286,86 @@ textarea{resize:vertical;min-height:130px}
 
 <!-- AI Model -->
 <div class="page" id="page-model">
-  <div class="page-header"><h2>AI Model</h2><p>Select which Ollama model to use for scene generation</p></div>
+  <div class="page-header"><h2>AI Model</h2><p>Choose between local Ollama or Anthropic Claude for scene generation</p></div>
 
-  <div id="ollamaStatusCard" class="ollama-banner checking" style="margin-bottom:18px">Checking Ollama...</div>
-
+  <!-- Provider Toggle -->
   <div class="card">
-    <div class="card-title">Ollama Configuration</div>
-    <div class="form-group">
-      <label>Ollama URL</label>
-      <input id="ollamaUrl" type="text" placeholder="http://localhost:11434"/>
+    <div class="card-title">AI Provider</div>
+    <div style="display:flex;gap:12px;margin-bottom:6px">
+      <label style="flex:1;cursor:pointer">
+        <div id="ollamaTab" onclick="switchProvider('ollama')" style="border:2px solid var(--accent);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(124,111,247,.1)">
+          <div style="font-size:22px;margin-bottom:6px">💻</div>
+          <div style="font-weight:700;font-size:13px;color:var(--accent2)">Ollama</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">Local — No API key needed<br>Fully offline</div>
+        </div>
+      </label>
+      <label style="flex:1;cursor:pointer">
+        <div id="anthropicTab" onclick="switchProvider('anthropic')" style="border:2px solid var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:all .2s">
+          <div style="font-size:22px;margin-bottom:6px">☁</div>
+          <div style="font-weight:700;font-size:13px;color:var(--text)">Anthropic Claude</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">Cloud — Requires API key<br>Higher accuracy</div>
+        </div>
+      </label>
     </div>
-    <div class="form-group">
-      <label>Model</label>
-      <select id="modelSelect">
-        <option value="">Loading models...</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <button class="btn btn-primary" onclick="saveModelConfig()">Save</button>
-      <button class="btn btn-outline btn-sm" onclick="refreshModels()">↻ Refresh models</button>
-    </div>
-    <div id="modelSaved" style="display:none;margin-top:10px;color:var(--success);font-size:12px">Settings saved!</div>
+    <div id="providerBadge" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
   </div>
 
-  <div class="card">
-    <div class="card-title">Available Models</div>
-    <div id="modelList" style="color:var(--muted);font-size:13px">Loading...</div>
-    <div style="margin-top:14px;font-size:12px;color:var(--muted)">
-      Don't have a model? Run in your terminal:<br>
-      <code style="background:var(--surface2);padding:4px 8px;border-radius:5px;display:inline-block;margin-top:6px;color:var(--accent2)">ollama pull llama3</code>
+  <!-- Ollama Section -->
+  <div id="ollamaSection">
+    <div id="ollamaStatusCard" class="ollama-banner checking" style="margin-bottom:18px">Checking Ollama...</div>
+    <div class="card">
+      <div class="card-title">Ollama Configuration</div>
+      <div class="form-group">
+        <label>Ollama URL</label>
+        <input id="ollamaUrl" type="text" placeholder="http://localhost:11434"/>
+      </div>
+      <div class="form-group">
+        <label>Model</label>
+        <select id="modelSelect"><option value="">Loading models...</option></select>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" onclick="saveModelConfig()">Save</button>
+        <button class="btn btn-outline btn-sm" onclick="refreshModels()">↻ Refresh models</button>
+      </div>
+      <div id="modelSaved" style="display:none;margin-top:10px;color:var(--success);font-size:12px">Settings saved!</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Available Models</div>
+      <div id="modelList" style="color:var(--muted);font-size:13px">Loading...</div>
+      <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+        Don't have a model? Run in your terminal:<br>
+        <code style="background:var(--surface2);padding:4px 8px;border-radius:5px;display:inline-block;margin-top:6px;color:var(--accent2)">ollama pull mistral</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anthropic Section -->
+  <div id="anthropicSection" style="display:none">
+    <div id="anthropicStatusCard" class="ollama-banner checking" style="margin-bottom:18px">Checking credentials...</div>
+    <div class="card">
+      <div class="card-title">Anthropic Configuration</div>
+      <div class="form-group">
+        <label>Anthropic API Key</label>
+        <input id="anthropicKeyInput" type="password" placeholder="sk-ant-xxxxxxxxxxxxxxxx"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">Get your key at console.anthropic.com</div>
+      </div>
+      <div class="form-group">
+        <label>Cloudflare Worker Relay URL</label>
+        <input id="relayUrlInput" type="text" placeholder="https://your-worker.workers.dev"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:5px">All Anthropic calls go through this relay</div>
+      </div>
+      <button class="btn btn-primary" onclick="saveAnthropicConfig()">Save</button>
+      <div id="anthropicSaved" style="display:none;margin-top:10px;color:var(--success);font-size:12px">Credentials saved!</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Model Used</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0">
+        <span style="font-size:22px">🤖</span>
+        <div>
+          <div style="font-weight:700;font-size:13px">claude-opus-4-7</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Anthropic's most capable model — best storyboard accuracy</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -403,14 +454,26 @@ function setBadge(id, state, label) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 async function refreshDash() {
-  const [files, ollama] = await Promise.all([
+  const [files, config, ollama, anthropic] = await Promise.all([
     fetch('/api/files').then(r => r.json()),
+    fetch('/api/config').then(r => r.json()),
     fetch('/api/ollama/status').then(r => r.json()),
+    fetch('/api/anthropic/status').then(r => r.json()),
   ]);
 
-  setBadge('ck-script',  files.script.exists  ? 'ok' : 'miss',  files.script.exists  ? fmt(files.script.size) : 'Missing');
-  setBadge('ck-audio',   files.audio.exists   ? 'ok' : 'miss',  files.audio.exists   ? fmt(files.audio.size)  : 'Missing');
-  setBadge('ck-ollama',  ollama.running        ? 'ok' : 'miss',  ollama.running        ? 'Running' : 'Not running');
+  const provider = config.aiProvider || 'ollama';
+
+  setBadge('ck-script', files.script.exists ? 'ok' : 'miss', files.script.exists ? fmt(files.script.size) : 'Missing');
+  setBadge('ck-audio',  files.audio.exists  ? 'ok' : 'miss', files.audio.exists  ? fmt(files.audio.size)  : 'Missing');
+
+  const aiLabelEl = document.getElementById('ck-ai-label');
+  if (provider === 'anthropic') {
+    aiLabelEl.textContent = 'Anthropic Claude (cloud)';
+    setBadge('ck-ollama', anthropic.configured ? 'ok' : 'miss', anthropic.configured ? 'Configured' : 'Missing key/relay');
+  } else {
+    aiLabelEl.textContent = 'Ollama (local)';
+    setBadge('ck-ollama', ollama.running ? 'ok' : 'miss', ollama.running ? 'Running' : 'Not running');
+  }
   setBadge('ck-story',  files.storyboard.exists ? 'ok' : 'warn', files.storyboard.exists ? 'Generated'         : 'Not yet');
   setBadge('ck-video',  files.video.exists  ? 'ok' : 'warn', files.video.exists  ? fmt(files.video.size)  : 'Not yet');
   setBadge('ck-shorts', files.shorts.exists ? 'ok' : 'warn', files.shorts.exists ? fmt(files.shorts.size) : 'Not yet');
@@ -441,8 +504,15 @@ async function refreshDash() {
     dlShortsEl.style.display = 'none';
   }
 
-  updateOllamaSidebar(ollama.running);
+  if (provider === 'anthropic') {
+    document.getElementById('ollamaDot').className = 'dot ' + (anthropic.configured ? 'green' : 'amber');
+    document.getElementById('ollamaLabel').textContent = anthropic.configured ? 'Anthropic configured' : 'Anthropic not set';
+  } else {
+    document.getElementById('ollamaDot').className = 'dot ' + (ollama.running ? 'green' : 'amber');
+    document.getElementById('ollamaLabel').textContent = ollama.running ? 'Ollama connected' : 'Ollama offline';
+  }
 }
+
 
 function updateOllamaSidebar(running) {
   document.getElementById('ollamaDot').className = 'dot ' + (running ? 'green' : 'amber');
@@ -510,13 +580,79 @@ async function uploadAudio(input) {
 }
 
 // ── Model page ────────────────────────────────────────────────────────────────
+
+let activeProvider = 'ollama';
+
+function switchProvider(provider) {
+  activeProvider = provider;
+  const ollamaTab     = document.getElementById('ollamaTab');
+  const anthropicTab  = document.getElementById('anthropicTab');
+  const ollamaSection = document.getElementById('ollamaSection');
+  const anthropicSection = document.getElementById('anthropicSection');
+  const badge = document.getElementById('providerBadge');
+
+  if (provider === 'ollama') {
+    ollamaTab.style.border = '2px solid var(--accent)';
+    ollamaTab.style.background = 'rgba(124,111,247,.1)';
+    ollamaTab.querySelector('div:nth-child(2)').style.color = 'var(--accent2)';
+    anthropicTab.style.border = '2px solid var(--border)';
+    anthropicTab.style.background = 'transparent';
+    anthropicTab.querySelector('div:nth-child(2)').style.color = 'var(--text)';
+    ollamaSection.style.display = '';
+    anthropicSection.style.display = 'none';
+    badge.textContent = 'Active: Ollama (local LLM)';
+    badge.style.color = 'var(--accent2)';
+  } else {
+    anthropicTab.style.border = '2px solid var(--accent)';
+    anthropicTab.style.background = 'rgba(124,111,247,.1)';
+    anthropicTab.querySelector('div:nth-child(2)').style.color = 'var(--accent2)';
+    ollamaTab.style.border = '2px solid var(--border)';
+    ollamaTab.style.background = 'transparent';
+    ollamaTab.querySelector('div:nth-child(2)').style.color = 'var(--text)';
+    ollamaSection.style.display = 'none';
+    anthropicSection.style.display = '';
+    badge.textContent = 'Active: Anthropic Claude (cloud)';
+    badge.style.color = 'var(--accent2)';
+    checkAnthropicStatus();
+  }
+
+  fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ aiProvider: provider }),
+  });
+}
+
+async function checkAnthropicStatus() {
+  const data = await fetch('/api/anthropic/status').then(r => r.json());
+  const banner = document.getElementById('anthropicStatusCard');
+  if (data.configured) {
+    banner.className = 'ollama-banner ok';
+    banner.textContent = '● Anthropic configured — API key and relay URL are set';
+  } else if (data.hasKey && !data.hasRelay) {
+    banner.className = 'ollama-banner err';
+    banner.textContent = '● API key set but Relay URL is missing';
+  } else if (!data.hasKey && data.hasRelay) {
+    banner.className = 'ollama-banner err';
+    banner.textContent = '● Relay URL set but API key is missing';
+  } else {
+    banner.className = 'ollama-banner err';
+    banner.textContent = '● Not configured — enter your API key and Relay URL below';
+  }
+}
+
 async function loadModelPage() {
   const [config, ollama] = await Promise.all([
     fetch('/api/config').then(r => r.json()),
     fetch('/api/ollama/status').then(r => r.json()),
   ]);
 
+  activeProvider = config.aiProvider || 'ollama';
+  switchProvider(activeProvider);
+
   document.getElementById('ollamaUrl').value = config.ollamaUrl;
+  if (config.hasAnthropicKey) document.getElementById('anthropicKeyInput').placeholder = config.anthropicKey;
+  if (config.hasRelayUrl)     document.getElementById('relayUrlInput').value = config.relayUrl;
 
   const banner = document.getElementById('ollamaStatusCard');
   if (ollama.running) {
@@ -532,14 +668,14 @@ async function loadModelPage() {
 
 async function refreshModels(selectedModel) {
   const data = await fetch('/api/ollama/models').then(r => r.json());
-  const sel = document.getElementById('modelSelect');
+  const sel    = document.getElementById('modelSelect');
   const listEl = document.getElementById('modelList');
-  const cfg = await fetch('/api/config').then(r => r.json());
+  const cfg    = await fetch('/api/config').then(r => r.json());
   const current = selectedModel || cfg.ollamaModel;
 
   if (!data.models || data.models.length === 0) {
     sel.innerHTML = '<option value="">No models found</option>';
-    listEl.innerHTML = '<span style="color:var(--error)">No models found. Run: ollama pull llama3</span>';
+    listEl.innerHTML = '<span style="color:var(--error)">No models found. Run: ollama pull mistral</span>';
     return;
   }
 
@@ -551,11 +687,30 @@ async function saveModelConfig() {
   const ollamaUrl   = document.getElementById('ollamaUrl').value.trim();
   const ollamaModel = document.getElementById('modelSelect').value;
   const cfg = await fetch('/api/config').then(r => r.json());
-  await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, ollamaUrl, ollamaModel }) });
+  await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, ollamaUrl, ollamaModel, aiProvider: activeProvider }) });
   const el = document.getElementById('modelSaved');
   el.style.display = '';
   setTimeout(() => el.style.display = 'none', 2000);
-  toast('Model settings saved');
+  toast('Ollama settings saved');
+  refreshDash();
+}
+
+async function saveAnthropicConfig() {
+  const anthropicKey = document.getElementById('anthropicKeyInput').value.trim();
+  const relayUrl     = document.getElementById('relayUrlInput').value.trim();
+  if (!anthropicKey && !relayUrl) { toast('Enter at least one field', 'err'); return; }
+  const cfg = await fetch('/api/config').then(r => r.json());
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...cfg, aiProvider: 'anthropic', anthropicKey: anthropicKey || undefined, relayUrl: relayUrl || undefined }),
+  });
+  document.getElementById('anthropicKeyInput').value = '';
+  const el = document.getElementById('anthropicSaved');
+  el.style.display = '';
+  setTimeout(() => el.style.display = 'none', 2000);
+  toast('Anthropic credentials saved');
+  checkAnthropicStatus();
   refreshDash();
 }
 

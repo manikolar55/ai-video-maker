@@ -1,8 +1,8 @@
 # ReelForge — AI Video Maker
 
-A fully local AI-powered video creation pipeline. Give it a script, it generates a voiceover, breaks it into scenes using a local LLM, and renders both a **YouTube video (1920x1080)** and **YouTube Shorts (1080x1920)** as `.mp4` files — all from your browser.
+A fully local AI-powered video creation pipeline. Give it a script, it generates a voiceover, breaks it into scenes using a local or cloud LLM, and renders both a **YouTube video (1920x1080)** and **YouTube Shorts (1080x1920)** as `.mp4` files — all from your browser.
 
-No paid APIs. No cloud rendering. No CapCut. Just your machine.
+No CapCut. No cloud rendering fees. Just your machine and your browser.
 
 ---
 
@@ -15,7 +15,7 @@ Script (text)
 [1] Generate Voiceover   -->  Microsoft Edge TTS (free, neural voices)
      |
      v
-[2] Parse with Ollama    -->  Local LLM breaks script into timed scenes
+[2] Parse with AI        -->  Ollama (local) OR Anthropic Claude (cloud)
      |
      v
 [3] Build Remotion       -->  React components generated per scene
@@ -33,7 +33,7 @@ Script (text)
 |---|---|
 | Web UI | HTML / CSS / Vanilla JS |
 | Backend | Node.js + Express |
-| Scene Generation | Ollama (local LLM — Mistral, Llama 3, etc.) |
+| Scene Generation | Ollama (local) or Anthropic Claude (cloud) |
 | Voiceover | Microsoft Edge TTS via msedge-tts |
 | Video Framework | Remotion (React-based) |
 | Audio Duration | fluent-ffmpeg |
@@ -43,16 +43,14 @@ Script (text)
 
 ## Prerequisites
 
-Before running, make sure you have:
-
 | Requirement | How to get it |
 |---|---|
 | Node.js 18+ | https://nodejs.org |
 | FFmpeg | `winget install ffmpeg` (Windows) / `brew install ffmpeg` (Mac) |
-| Ollama | https://ollama.com/download |
-| At least one Ollama model | `ollama pull mistral` |
+| Ollama (if using local AI) | https://ollama.com/download |
+| Anthropic API key (if using cloud AI) | https://console.anthropic.com |
 
-Verify everything is installed:
+Verify installs:
 
 ```bash
 node --version
@@ -74,8 +72,6 @@ npm install
 
 ## Setup
 
-**1. Configure environment**
-
 Copy the example env file:
 
 ```bash
@@ -85,35 +81,61 @@ cp .env.example .env
 Edit `.env`:
 
 ```
+AI_PROVIDER=ollama
+
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=mistral
+
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+RELAY_URL=your_cloudflare_worker_url_here
+
 TTS_VOICE=en-US-AriaNeural
 TTS_RATE=+0%
 ```
 
-**2. Add your script**
-
-Place your video script at `input/script.txt` or type it directly in the browser dashboard.
+Set `AI_PROVIDER` to either `ollama` or `anthropic`.
 
 ---
 
 ## Running
 
-Open two terminals:
-
-**Terminal 1 — Start Ollama:**
+**If using Ollama — open Terminal 1:**
 
 ```bash
 ollama serve
 ```
 
-**Terminal 2 — Start the app:**
+**Terminal 2 (always):**
 
 ```bash
 node server.js
 ```
 
-Then open your browser at `http://localhost:3000`
+Open your browser at `http://localhost:3000`
+
+---
+
+## AI Provider Options
+
+You can switch between providers anytime from the **AI Model** page in the dashboard.
+
+### Ollama (Local)
+
+- Runs fully on your machine
+- No API key needed
+- Works offline
+- Best models: `mistral`, `llama3.1`, `gemma2`
+
+```bash
+ollama pull mistral
+```
+
+### Anthropic Claude (Cloud)
+
+- Uses Claude via a Cloudflare Worker relay
+- Requires an Anthropic API key
+- Higher accuracy for scene parsing and JSON output
+- Model used: `claude-opus-4-7`
 
 ---
 
@@ -124,7 +146,7 @@ Then open your browser at `http://localhost:3000`
 | Dashboard | Readiness checklist — see what is ready at a glance |
 | Script Editor | Write or upload your video script |
 | Voice Settings | Choose from 11 Microsoft neural voices and speaking speed |
-| AI Model | Select which Ollama model to use |
+| AI Model | Switch between Ollama and Anthropic, configure credentials |
 | Run Pipeline | One click runs all 4 stages with live logs |
 | Storyboard | Preview every scene with color, timing, and transitions |
 
@@ -134,7 +156,7 @@ Then open your browser at `http://localhost:3000`
 
 ```bash
 node generate-voice.js   # generate voiceover from script
-node parse-script.js     # parse script into scenes using Ollama
+node parse-script.js     # parse script into scenes using AI
 node generate-video.js   # build Remotion React project
 node render.js           # render both MP4 files
 node index.js            # run full pipeline (all 4 stages)
@@ -159,10 +181,6 @@ node index.js            # run full pipeline (all 4 stages)
 | llama3.1 | Very good | Medium | 4.7 GB |
 | gemma2 | Very structured | Medium | 5.4 GB |
 | phi3 | Good for low RAM | Very fast | 2 GB |
-
-```bash
-ollama pull mistral
-```
 
 ---
 
@@ -193,14 +211,14 @@ reelforge/
 ├── .env.example            <- template to copy from
 ├── server.js               <- Express backend + SSE pipeline runner
 ├── generate-voice.js       <- TTS voiceover generator
-├── parse-script.js         <- Ollama scene parser
+├── parse-script.js         <- AI scene parser (Ollama or Anthropic)
 ├── generate-video.js       <- Remotion project builder (both layouts)
 ├── render.js               <- MP4 renderer (YouTube + Shorts)
 ├── index.js                <- CLI pipeline runner
 └── package.json
 ```
 
-Generated at runtime and not committed to git:
+Generated at runtime, not committed to git:
 `src/`, `output/`, `out/`, `remotion.config.js`, `public/voiceover.mp3`
 
 ---
@@ -209,11 +227,11 @@ Generated at runtime and not committed to git:
 
 **Ollama not found**
 
-Make sure Ollama is installed and running:
-
 ```bash
 ollama serve
 ```
+
+Make sure Ollama is installed and running before starting the app.
 
 **FFmpeg not found**
 
@@ -225,13 +243,17 @@ sudo apt install ffmpeg # Linux
 
 Reopen your terminal after installing.
 
-**Invalid JSON from Ollama**
+**Invalid JSON from AI**
 
-Re-run the Parse Script stage. It usually works on the second attempt. Use `mistral` for the most reliable JSON output.
+Re-run the Parse Script stage. Use `mistral` for Ollama or switch to Anthropic for the most reliable output.
 
 **Edge TTS fails**
 
 Falls back to Windows built-in TTS automatically. Edge TTS requires an internet connection.
+
+**Anthropic relay errors**
+
+Make sure your Cloudflare Worker URL is correct and the worker is deployed and active.
 
 ---
 

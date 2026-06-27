@@ -24,13 +24,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function readEnv() {
-  const defaults = { OLLAMA_URL: 'http://localhost:11434', OLLAMA_MODEL: 'llama3', TTS_VOICE: 'en-US-AriaNeural', TTS_RATE: '+0%' };
+  const defaults = {
+    AI_PROVIDER: 'ollama',
+    OLLAMA_URL: 'http://localhost:11434',
+    OLLAMA_MODEL: 'mistral',
+    ANTHROPIC_API_KEY: '',
+    RELAY_URL: '',
+    TTS_VOICE: 'en-US-AriaNeural',
+    TTS_RATE: '+0%',
+  };
   if (!fs.existsSync(ENV_FILE)) return defaults;
   const lines = fs.readFileSync(ENV_FILE, 'utf-8').split('\n');
   const env = { ...defaults };
   lines.forEach((line) => {
     const [k, ...v] = line.split('=');
-    if (k && v.length) env[k.trim()] = v.join('=').trim();
+    if (k && k.trim() && v.length) env[k.trim()] = v.join('=').trim();
   });
   return env;
 }
@@ -67,24 +75,45 @@ app.post('/api/upload/audio', upload.single('audio'), (req, res) => {
 
 app.get('/api/config', (req, res) => {
   const env = readEnv();
+  const apiKey = env.ANTHROPIC_API_KEY || '';
+  const hasKey = apiKey && apiKey !== 'your_anthropic_api_key_here';
+  const relayUrl = env.RELAY_URL || '';
+  const hasRelay = relayUrl && relayUrl !== 'your_cloudflare_worker_url_here';
   res.json({
-    ollamaUrl: env.OLLAMA_URL || 'http://localhost:11434',
-    ollamaModel: env.OLLAMA_MODEL || 'llama3',
+    aiProvider:   env.AI_PROVIDER   || 'ollama',
+    ollamaUrl:    env.OLLAMA_URL    || 'http://localhost:11434',
+    ollamaModel:  env.OLLAMA_MODEL  || 'mistral',
+    anthropicKey: hasKey  ? '••••••' + apiKey.slice(-4) : '',
+    relayUrl:     hasRelay ? relayUrl : '',
+    hasAnthropicKey: hasKey,
+    hasRelayUrl:     hasRelay,
     ttsVoice: env.TTS_VOICE || 'en-US-AriaNeural',
-    ttsRate: env.TTS_RATE || '+0%',
+    ttsRate:  env.TTS_RATE  || '+0%',
   });
 });
 
 app.post('/api/config', (req, res) => {
-  const { ollamaUrl, ollamaModel, ttsVoice, ttsRate } = req.body;
+  const { ollamaUrl, ollamaModel, ttsVoice, ttsRate, aiProvider, anthropicKey, relayUrl } = req.body;
   const current = readEnv();
   writeEnv({
-    OLLAMA_URL: ollamaUrl || current.OLLAMA_URL,
-    OLLAMA_MODEL: ollamaModel || current.OLLAMA_MODEL,
-    TTS_VOICE: ttsVoice || current.TTS_VOICE,
-    TTS_RATE: ttsRate || current.TTS_RATE,
+    AI_PROVIDER:       aiProvider    || current.AI_PROVIDER,
+    OLLAMA_URL:        ollamaUrl     || current.OLLAMA_URL,
+    OLLAMA_MODEL:      ollamaModel   || current.OLLAMA_MODEL,
+    ANTHROPIC_API_KEY: anthropicKey  || current.ANTHROPIC_API_KEY,
+    RELAY_URL:         relayUrl      || current.RELAY_URL,
+    TTS_VOICE:         ttsVoice      || current.TTS_VOICE,
+    TTS_RATE:          ttsRate       || current.TTS_RATE,
   });
   res.json({ success: true });
+});
+
+// ── Anthropic status ──────────────────────────────────────────────────────────
+
+app.get('/api/anthropic/status', (req, res) => {
+  const env = readEnv();
+  const hasKey   = env.ANTHROPIC_API_KEY && env.ANTHROPIC_API_KEY !== 'your_anthropic_api_key_here';
+  const hasRelay = env.RELAY_URL && env.RELAY_URL !== 'your_cloudflare_worker_url_here';
+  res.json({ configured: !!(hasKey && hasRelay), hasKey: !!hasKey, hasRelay: !!hasRelay });
 });
 
 // ── Ollama integration ────────────────────────────────────────────────────────
