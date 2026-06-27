@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Video Maker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--surface:#161a22;--surface2:#1e2330;--border:#252b3b;
+  --accent:#7c6ff7;--accent2:#a78bfa;--success:#22c55e;--error:#ef4444;
+  --warn:#f59e0b;--text:#e2e8f0;--muted:#64748b;--radius:12px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.6;min-height:100vh}
+
+/* Layout */
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+/* Sidebar */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:hidden}
+.logo{padding:20px 18px 18px;border-bottom:1px solid var(--border)}
+.logo h1{font-size:15px;font-weight:800;color:var(--accent2);letter-spacing:-0.3px}
+.logo p{font-size:11px;color:var(--muted);margin-top:2px}
+nav{padding:10px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s;user-select:none}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--accent2);border-left-color:var(--accent);background:rgba(124,111,247,.09)}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.sidebar-bottom{padding:14px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.pill{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.dot.green{background:var(--success);box-shadow:0 0 5px var(--success)}
+.dot.amber{background:var(--warn);box-shadow:0 0 5px var(--warn)}
+.dot.pulse{background:var(--accent);box-shadow:0 0 5px var(--accent);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Main */
+.main{padding:28px 32px;overflow-y:auto}
+.page{display:none}
+.page.active{display:block}
+.page-header{margin-bottom:24px}
+.page-header h2{font-size:20px;font-weight:700}
+.page-header p{color:var(--muted);font-size:12px;margin-top:3px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:14px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#6d62e0}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#16a34a}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent2)}
+.btn-ghost{background:rgba(124,111,247,.1);color:var(--accent2);border:1px solid rgba(124,111,247,.25)}
+.btn-ghost:hover{background:rgba(124,111,247,.2)}
+.btn-danger{background:var(--error);color:#fff}
+.btn-sm{padding:6px 13px;font-size:12px}
+
+/* Forms */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+select option{background:var(--surface2)}
+textarea{resize:vertical;min-height:130px}
+
+/* Upload zones */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(124,111,247,.05)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:28px;margin-bottom:8px}
+.upload-label{font-weight:600;font-size:13px}
+.upload-hint{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Status badges */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:5px}
+.badge-ok{background:rgba(34,197,94,.12);color:var(--success)}
+.badge-miss{background:rgba(239,68,68,.12);color:var(--error)}
+.badge-warn{background:rgba(245,158,11,.12);color:var(--warn)}
+
+/* Checklist */
+.checklist{display:flex;flex-direction:column;gap:9px}
+.check-item{display:flex;align-items:center;gap:12px;padding:11px 15px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:13px}
+.check-icon{font-size:17px;flex-shrink:0}
+.check-label{flex:1}
+
+/* Pipeline steps */
+.steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.step{display:flex;align-items:center;gap:13px;padding:13px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;transition:all .2s}
+.step.active{border-color:var(--accent);background:rgba(124,111,247,.07)}
+.step.done{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05)}
+.step.error{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05)}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--border);color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.step.active .step-num{background:var(--accent);color:#fff}
+.step.done .step-num{background:var(--success);color:#fff}
+.step.error .step-num{background:var(--error);color:#fff}
+.step-info{flex:1}
+.step-label{font-size:13px;font-weight:600}
+.step-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-left:auto;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Terminal */
+.terminal{background:#080a0e;border:1px solid var(--border);border-radius:10px;font-family:'Cascadia Code','Consolas',monospace;font-size:12px;height:300px;overflow-y:auto;padding:14px;line-height:1.8}
+.terminal::-webkit-scrollbar{width:5px}
+.terminal::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.log-line{white-space:pre-wrap;word-break:break-all}
+.log-stage{color:var(--accent2);font-weight:700;margin-top:6px}
+.log-error{color:var(--error)}
+.log-success{color:var(--success);font-weight:700;margin-top:4px}
+.log-muted{color:var(--muted)}
+
+/* Storyboard */
+.scenes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.scene-card{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.scene-preview{height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;text-align:center}
+.scene-onscreen{font-size:15px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.scene-subtitle{font-size:10px;color:rgba(255,255,255,.45);margin-top:5px}
+.scene-meta{background:var(--surface2);padding:11px 13px}
+.scene-num{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.scene-dur{font-size:13px;font-weight:700;color:var(--text)}
+.scene-trans{display:inline-block;font-size:10px;padding:2px 7px;background:rgba(124,111,247,.15);color:var(--accent2);border-radius:4px;margin-top:4px}
+.scene-vo{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+/* Ollama status banner */
+.ollama-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:18px;border:1px solid}
+.ollama-banner.ok{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.2);color:var(--success)}
+.ollama-banner.err{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.2);color:var(--error)}
+.ollama-banner.checking{background:rgba(100,116,139,.07);border-color:var(--border);color:var(--muted)}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* Info box */
+.info-box{background:rgba(124,111,247,.07);border:1px solid rgba(124,111,247,.2);border-radius:8px;padding:12px 15px;font-size:12px;color:var(--accent2);margin-bottom:16px}
+
+/* Run controls */
+.run-controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.run-main{padding:12px 28px;font-size:14px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#6d28d9);color:#fff;border:none;cursor:pointer;font-weight:700;font-family:inherit;display:inline-flex;align-items:center;gap:9px;transition:opacity .15s}
+.run-main:hover{opacity:.9}
+.run-main:disabled{opacity:.4;cursor:not-allowed}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;transform:translateY(60px);opacity:0;transition:all .22s;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{background:var(--success);color:#fff}
+#toast.err{background:var(--error);color:#fff}
+#toast.info{background:var(--accent);color:#fff}
+
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <h1>AI Video Maker</h1>
+    <p>Ollama + Edge TTS + Remotion</p>
+  </div>
+  <nav>
+    <div class="nav-item active" data-page="dashboard" onclick="go('dashboard')"><span class="nav-icon">▣</span> Dashboard</div>
+    <div class="nav-item" data-page="script" onclick="go('script')"><span class="nav-icon">✎</span> Script Editor</div>
+    <div class="nav-item" data-page="voice" onclick="go('voice')"><span class="nav-icon">♪</span> Voice Settings</div>
+    <div class="nav-item" data-page="model" onclick="go('model')"><span class="nav-icon">⚙</span> AI Model</div>
+    <div class="nav-item" data-page="run" onclick="go('run')"><span class="nav-icon">▶</span> Run Pipeline</div>
+    <div class="nav-item" data-page="storyboard" onclick="go('storyboard')"><span class="nav-icon">⊞</span> Storyboard</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="pill"><div class="dot green"></div><span>Server running</span></div>
+    <div class="pill"><div class="dot" id="ollamaDot"></div><span id="ollamaLabel">Checking Ollama...</span></div>
+    <div class="pill"><div class="dot" id="pipelineDot"></div><span id="pipelineLabel">Pipeline idle</span></div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+<!-- Dashboard -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header"><h2>Dashboard</h2><p>Project status at a glance</p></div>
+
+  <div id="ollamaBanner" class="ollama-banner checking">&#9679; Checking Ollama connection...</div>
+
+  <div class="card">
+    <div class="card-title">Readiness Checklist</div>
+    <div class="checklist">
+      <div class="check-item"><span class="check-icon">✎</span><span class="check-label">Script (input/script.txt)</span><span class="badge badge-miss" id="ck-script">Missing</span></div>
+      <div class="check-item"><span class="check-icon">♪</span><span class="check-label">Voiceover audio (generated or uploaded)</span><span class="badge badge-miss" id="ck-audio">Missing</span></div>
+      <div class="check-item"><span class="check-icon">⚙</span><span class="check-label">Ollama running locally</span><span class="badge badge-miss" id="ck-ollama">Checking...</span></div>
+      <div class="check-item"><span class="check-icon">▶</span><span class="check-label">Storyboard generated</span><span class="badge badge-miss" id="ck-story">Not yet</span></div>
+      <div class="check-item"><span class="check-icon">🎬</span><span class="check-label">YouTube Video (1920x1080)</span><span class="badge badge-miss" id="ck-video">Not yet</span></div>
+      <div class="check-item"><span class="check-icon">📱</span><span class="check-label">YouTube Shorts (1080x1920)</span><span class="badge badge-miss" id="ck-shorts">Not yet</span></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <button class="btn btn-outline" onclick="go('script')">✎ Write your script</button>
+        <button class="btn btn-outline" onclick="go('voice')">♪ Configure voice</button>
+        <button class="btn btn-outline" onclick="go('model')">⚙ Select AI model</button>
+        <button class="btn btn-primary" onclick="go('run')">▶ Run pipeline</button>
+        <button class="btn btn-success" id="dashDL" style="display:none" onclick="dlVideo()">⬇ YouTube Video</button>
+        <button class="btn btn-success" id="dashDLShorts" style="display:none" onclick="dlShorts()">📱 YouTube Shorts</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Output</div>
+      <div id="dashOutput" style="color:var(--muted);font-size:13px">No video rendered yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Script Editor -->
+<div class="page" id="page-script">
+  <div class="page-header"><h2>Script Editor</h2><p>Write or upload your video script</p></div>
+
+  <div class="card">
+    <div class="card-title">Type your script</div>
+    <textarea id="scriptArea" placeholder="Write your video script here. Each paragraph becomes a scene..."></textarea>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-primary" onclick="saveScript()">Save script</button>
+      <span id="scriptSaved" style="display:none;color:var(--success);font-size:12px;align-self:center">Saved!</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Or upload a .txt file</div>
+    <div class="upload-zone">
+      <input type="file" accept=".txt" onchange="uploadScript(this)"/>
+      <div class="upload-icon">📄</div>
+      <div class="upload-label">Drop script.txt here or click to browse</div>
+      <div class="upload-hint">Plain .txt file</div>
+    </div>
+    <div id="scriptUpOk" style="display:none;margin-top:10px;color:var(--success);font-size:13px"></div>
+  </div>
+</div>
+
+<!-- Voice Settings -->
+<div class="page" id="page-voice">
+  <div class="page-header"><h2>Voice Settings</h2><p>Configure TTS voice — Microsoft neural voices, no API key needed</p></div>
+
+  <div class="info-box">♪ Voiceover is generated automatically from your script using Microsoft Edge TTS (free, requires internet). No upload needed.</div>
+
+  <div class="card">
+    <div class="card-title">Voice Configuration</div>
+    <div class="form-group">
+      <label>Voice</label>
+      <select id="voiceSelect"></select>
+    </div>
+    <div class="form-group">
+      <label>Speaking Rate</label>
+      <select id="rateSelect">
+        <option value="-20%">Slow (-20%)</option>
+        <option value="-10%">Slightly Slow (-10%)</option>
+        <option value="+0%" selected>Normal</option>
+        <option value="+10%">Slightly Fast (+10%)</option>
+        <option value="+20%">Fast (+20%)</option>
+        <option value="+30%">Very Fast (+30%)</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="saveVoiceConfig()">Save voice settings</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Or upload your own audio</div>
+    <div class="upload-zone">
+      <input type="file" accept=".mp3,.wav" onchange="uploadAudio(this)"/>
+      <div class="upload-icon">🎵</div>
+      <div class="upload-label">Drop voiceover.mp3 here or click to browse</div>
+      <div class="upload-hint">MP3 or WAV — skips TTS generation</div>
+    </div>
+    <div id="audioUpOk" style="display:none;margin-top:10px;color:var(--success);font-size:13px"></div>
+  </div>
+</div>
+
+<!-- AI Model -->
+<div class="page" id="page-model">
+  <div class="page-header"><h2>AI Model</h2><p>Select which Ollama model to use for scene generation</p></div>
+
+  <div id="ollamaStatusCard" class="ollama-banner checking" style="margin-bottom:18px">Checking Ollama...</div>
+
+  <div class="card">
+    <div class="card-title">Ollama Configuration</div>
+    <div class="form-group">
+      <label>Ollama URL</label>
+      <input id="ollamaUrl" type="text" placeholder="http://localhost:11434"/>
+    </div>
+    <div class="form-group">
+      <label>Model</label>
+      <select id="modelSelect">
+        <option value="">Loading models...</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" onclick="saveModelConfig()">Save</button>
+      <button class="btn btn-outline btn-sm" onclick="refreshModels()">↻ Refresh models</button>
+    </div>
+    <div id="modelSaved" style="display:none;margin-top:10px;color:var(--success);font-size:12px">Settings saved!</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Available Models</div>
+    <div id="modelList" style="color:var(--muted);font-size:13px">Loading...</div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+      Don't have a model? Run in your terminal:<br>
+      <code style="background:var(--surface2);padding:4px 8px;border-radius:5px;display:inline-block;margin-top:6px;color:var(--accent2)">ollama pull llama3</code>
+    </div>
+  </div>
+</div>
+
+<!-- Run Pipeline -->
+<div class="page" id="page-run">
+  <div class="page-header"><h2>Run Pipeline</h2><p>Generate voiceover, build scenes, and render your video</p></div>
+
+  <div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <button class="run-main" id="runAllBtn" onclick="runPipeline('all')">▶ Run Full Pipeline</button>
+    <button class="btn btn-success" id="dlBtn" style="display:none" onclick="dlVideo()">⬇ YouTube Video</button>
+    <button class="btn btn-success" id="dlShortsBtn" style="display:none" onclick="dlShorts()" style="background:#7c3aed">📱 YouTube Shorts</button>
+  </div>
+
+  <div class="run-controls">
+    <button class="btn btn-outline btn-sm" onclick="runPipeline('voice')">1. Voice only</button>
+    <button class="btn btn-outline btn-sm" onclick="runPipeline('parse')">2. Parse only</button>
+    <button class="btn btn-outline btn-sm" onclick="runPipeline('generate')">3. Build only</button>
+    <button class="btn btn-outline btn-sm" onclick="runPipeline('render')">4. Render only</button>
+    <button class="btn btn-outline btn-sm" onclick="runPipeline('novoice')">Skip voice gen</button>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="clearLogs()">Clear logs</button>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="st-voice"><div class="step-num">1</div><div class="step-info"><div class="step-label">Generate Voiceover</div><div class="step-sub">Microsoft Edge TTS reads your script aloud</div></div><div class="spinner" id="sp-voice" style="display:none"></div></div>
+    <div class="step" id="st-parse"><div class="step-num">2</div><div class="step-info"><div class="step-label">Parse Script with Ollama</div><div class="step-sub">Local AI breaks script into timed scenes</div></div><div class="spinner" id="sp-parse" style="display:none"></div></div>
+    <div class="step" id="st-generate"><div class="step-num">3</div><div class="step-info"><div class="step-label">Build Remotion Project</div><div class="step-sub">React components generated per scene</div></div><div class="spinner" id="sp-generate" style="display:none"></div></div>
+    <div class="step" id="st-render"><div class="step-num">4</div><div class="step-info"><div class="step-label">Render Final Video</div><div class="step-sub">Remotion exports 1920×1080 MP4</div></div><div class="spinner" id="sp-render" style="display:none"></div></div>
+  </div>
+
+  <div class="card" style="padding:0">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Live Logs</span>
+      <span id="logCount" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="terminal" id="terminal"><span class="log-muted">Ready — press Run Full Pipeline to start.</span></div>
+  </div>
+</div>
+
+<!-- Storyboard -->
+<div class="page" id="page-storyboard">
+  <div class="page-header"><h2>Storyboard</h2><p>Scene preview from the AI-generated storyboard</p></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+    <button class="btn btn-outline btn-sm" onclick="loadStoryboard()">↻ Refresh</button>
+    <span id="sbMeta" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+  <div id="sbContent"><div class="empty-state"><div class="empty-icon">⊞</div><p>No storyboard yet — run "Parse Script" first.</p></div></div>
+</div>
+
+</main>
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ── Router ────────────────────────────────────────────────────────────────────
+function go(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  if (page === 'dashboard') refreshDash();
+  if (page === 'model') { loadModelPage(); }
+  if (page === 'voice') loadVoicePage();
+  if (page === 'script') loadScriptPage();
+  if (page === 'storyboard') loadStoryboard();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (b) => !b ? '0 B' : b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(2)+' MB';
+
+function setBadge(id, state, label) {
+  const el = document.getElementById(id);
+  el.textContent = label;
+  el.className = 'badge badge-' + state;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function refreshDash() {
+  const [files, ollama] = await Promise.all([
+    fetch('/api/files').then(r => r.json()),
+    fetch('/api/ollama/status').then(r => r.json()),
+  ]);
+
+  setBadge('ck-script',  files.script.exists  ? 'ok' : 'miss',  files.script.exists  ? fmt(files.script.size) : 'Missing');
+  setBadge('ck-audio',   files.audio.exists   ? 'ok' : 'miss',  files.audio.exists   ? fmt(files.audio.size)  : 'Missing');
+  setBadge('ck-ollama',  ollama.running        ? 'ok' : 'miss',  ollama.running        ? 'Running' : 'Not running');
+  setBadge('ck-story',  files.storyboard.exists ? 'ok' : 'warn', files.storyboard.exists ? 'Generated'         : 'Not yet');
+  setBadge('ck-video',  files.video.exists  ? 'ok' : 'warn', files.video.exists  ? fmt(files.video.size)  : 'Not yet');
+  setBadge('ck-shorts', files.shorts.exists ? 'ok' : 'warn', files.shorts.exists ? fmt(files.shorts.size) : 'Not yet');
+
+  const banner = document.getElementById('ollamaBanner');
+  if (ollama.running) {
+    banner.className = 'ollama-banner ok';
+    banner.textContent = '● Ollama is running at ' + ollama.url;
+  } else {
+    banner.className = 'ollama-banner err';
+    banner.innerHTML = '● Ollama not detected — <strong>open a terminal and run: ollama serve</strong>';
+  }
+
+  const out        = document.getElementById('dashOutput');
+  const dl         = document.getElementById('dashDL');
+  const dlShortsEl = document.getElementById('dashDLShorts');
+
+  if (files.video.exists || files.shorts.exists) {
+    let html = '';
+    if (files.video.exists)  html += `<div style="margin-bottom:5px"><strong style="color:var(--success)">YouTube Video ready</strong> <span style="color:var(--muted)">(${fmt(files.video.size)})</span></div>`;
+    if (files.shorts.exists) html += `<div><strong style="color:var(--success)">YouTube Shorts ready</strong> <span style="color:var(--muted)">(${fmt(files.shorts.size)})</span></div>`;
+    out.innerHTML = html;
+    dl.style.display        = files.video.exists  ? '' : 'none';
+    dlShortsEl.style.display = files.shorts.exists ? '' : 'none';
+  } else {
+    out.textContent = 'No videos rendered yet.';
+    dl.style.display        = 'none';
+    dlShortsEl.style.display = 'none';
+  }
+
+  updateOllamaSidebar(ollama.running);
+}
+
+function updateOllamaSidebar(running) {
+  document.getElementById('ollamaDot').className = 'dot ' + (running ? 'green' : 'amber');
+  document.getElementById('ollamaLabel').textContent = running ? 'Ollama connected' : 'Ollama offline';
+}
+
+// ── Script page ───────────────────────────────────────────────────────────────
+async function loadScriptPage() {
+  const { content } = await fetch('/api/script').then(r => r.json());
+  document.getElementById('scriptArea').value = content;
+}
+
+async function saveScript() {
+  const text = document.getElementById('scriptArea').value;
+  await fetch('/api/script', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text });
+  const el = document.getElementById('scriptSaved');
+  el.style.display = 'inline';
+  setTimeout(() => el.style.display = 'none', 2000);
+  toast('Script saved');
+}
+
+async function uploadScript(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('script', file);
+  const data = await fetch('/api/upload/script', { method: 'POST', body: fd }).then(r => r.json());
+  if (data.success) {
+    document.getElementById('scriptUpOk').style.display = '';
+    document.getElementById('scriptUpOk').textContent = 'Uploaded: ' + file.name + ' (' + fmt(data.size) + ')';
+    document.getElementById('scriptArea').value = data.preview;
+    toast('Script uploaded');
+  } else toast(data.error, 'err');
+}
+
+// ── Voice page ────────────────────────────────────────────────────────────────
+async function loadVoicePage() {
+  const [voices, config] = await Promise.all([
+    fetch('/api/voices').then(r => r.json()),
+    fetch('/api/config').then(r => r.json()),
+  ]);
+
+  const sel = document.getElementById('voiceSelect');
+  sel.innerHTML = voices.voices.map(v => `<option value="${v.id}" ${v.id === config.ttsVoice ? 'selected' : ''}>${v.label}</option>`).join('');
+
+  const rate = document.getElementById('rateSelect');
+  for (const opt of rate.options) { if (opt.value === config.ttsRate) opt.selected = true; }
+}
+
+async function saveVoiceConfig() {
+  const ttsVoice = document.getElementById('voiceSelect').value;
+  const ttsRate  = document.getElementById('rateSelect').value;
+  const cfg = await fetch('/api/config').then(r => r.json());
+  await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, ttsVoice, ttsRate }) });
+  toast('Voice settings saved');
+}
+
+async function uploadAudio(input) {
+  const file = input.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('audio', file);
+  const data = await fetch('/api/upload/audio', { method: 'POST', body: fd }).then(r => r.json());
+  if (data.success) {
+    document.getElementById('audioUpOk').style.display = '';
+    document.getElementById('audioUpOk').textContent = 'Uploaded: ' + data.filename + ' (' + fmt(data.size) + ')';
+    toast('Audio uploaded — TTS step will be skipped');
+  } else toast(data.error, 'err');
+}
+
+// ── Model page ────────────────────────────────────────────────────────────────
+async function loadModelPage() {
+  const [config, ollama] = await Promise.all([
+    fetch('/api/config').then(r => r.json()),
+    fetch('/api/ollama/status').then(r => r.json()),
+  ]);
+
+  document.getElementById('ollamaUrl').value = config.ollamaUrl;
+
+  const banner = document.getElementById('ollamaStatusCard');
+  if (ollama.running) {
+    banner.className = 'ollama-banner ok';
+    banner.textContent = '● Ollama is running at ' + ollama.url;
+  } else {
+    banner.className = 'ollama-banner err';
+    banner.innerHTML = '● Ollama not running — start it with: <code>ollama serve</code>';
+  }
+
+  await refreshModels(config.ollamaModel);
+}
+
+async function refreshModels(selectedModel) {
+  const data = await fetch('/api/ollama/models').then(r => r.json());
+  const sel = document.getElementById('modelSelect');
+  const listEl = document.getElementById('modelList');
+  const cfg = await fetch('/api/config').then(r => r.json());
+  const current = selectedModel || cfg.ollamaModel;
+
+  if (!data.models || data.models.length === 0) {
+    sel.innerHTML = '<option value="">No models found</option>';
+    listEl.innerHTML = '<span style="color:var(--error)">No models found. Run: ollama pull llama3</span>';
+    return;
+  }
+
+  sel.innerHTML = data.models.map(m => `<option value="${m}" ${m === current ? 'selected' : ''}>${m}</option>`).join('');
+  listEl.innerHTML = data.models.map(m => `<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:center;gap:8px"><span style="color:var(--accent2)">◆</span> ${m}</div>`).join('');
+}
+
+async function saveModelConfig() {
+  const ollamaUrl   = document.getElementById('ollamaUrl').value.trim();
+  const ollamaModel = document.getElementById('modelSelect').value;
+  const cfg = await fetch('/api/config').then(r => r.json());
+  await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...cfg, ollamaUrl, ollamaModel }) });
+  const el = document.getElementById('modelSaved');
+  el.style.display = '';
+  setTimeout(() => el.style.display = 'none', 2000);
+  toast('Model settings saved');
+  refreshDash();
+}
+
+// ── Pipeline ──────────────────────────────────────────────────────────────────
+const STEP_KEYS = ['voice', 'parse', 'generate', 'render'];
+const KEY_MAP = { voice: 0, parse: 1, generate: 2, render: 3 };
+
+let logCount = 0;
+let currentKey = null;
+
+function clearLogs() {
+  document.getElementById('terminal').innerHTML = '<span class="log-muted">Cleared.</span>';
+  logCount = 0; document.getElementById('logCount').textContent = '';
+}
+
+function addLog(text, cls = '') {
+  const t = document.getElementById('terminal');
+  const d = document.createElement('div');
+  d.className = 'log-line ' + cls;
+  d.textContent = text;
+  t.appendChild(d);
+  t.scrollTop = t.scrollHeight;
+  logCount++;
+  document.getElementById('logCount').textContent = logCount + ' lines';
+}
+
+function resetSteps() {
+  STEP_KEYS.forEach(k => {
+    const el = document.getElementById('st-' + k);
+    el.classList.remove('active', 'done', 'error');
+    document.getElementById('sp-' + k).style.display = 'none';
+  });
+}
+
+function setActive(key) {
+  const idx = KEY_MAP[key];
+  STEP_KEYS.forEach((k, i) => {
+    const el = document.getElementById('st-' + k);
+    el.classList.remove('active', 'error');
+    if (i < idx) el.classList.add('done');
+    document.getElementById('sp-' + k).style.display = 'none';
+  });
+  document.getElementById('st-' + key).classList.add('active');
+  document.getElementById('sp-' + key).style.display = '';
+}
+
+function setDone(key) {
+  document.getElementById('st-' + key).classList.remove('active');
+  document.getElementById('st-' + key).classList.add('done');
+  document.getElementById('sp-' + key).style.display = 'none';
+}
+
+function setError(key) {
+  document.getElementById('st-' + key).classList.remove('active');
+  document.getElementById('st-' + key).classList.add('error');
+  document.getElementById('sp-' + key).style.display = 'none';
+}
+
+const LABEL_TO_KEY = {
+  'Generating voiceover': 'voice',
+  'voice': 'voice',
+  'Parsing script': 'parse',
+  'parse': 'parse',
+  'Building Remotion': 'generate',
+  'generate': 'generate',
+  'Rendering': 'render',
+  'render': 'render',
+};
+
+function detectKey(label) {
+  for (const [k, v] of Object.entries(LABEL_TO_KEY)) {
+    if (label.includes(k)) return v;
+  }
+  return null;
+}
+
+function runPipeline(stage) {
+  const btn = document.getElementById('runAllBtn');
+  btn.disabled = true;
+  document.getElementById('dlBtn').style.display = 'none';
+  resetSteps();
+  document.getElementById('terminal').innerHTML = '';
+  logCount = 0; currentKey = null;
+
+  document.getElementById('pipelineDot').className = 'dot pulse';
+  document.getElementById('pipelineLabel').textContent = 'Pipeline running...';
+
+  const src = new EventSource(`/api/run?stage=${stage}`);
+
+  src.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'stage') {
+      addLog(msg.label, 'log-stage');
+      const k = msg.key || detectKey(msg.label);
+      if (k) {
+        if (currentKey && currentKey !== k) setDone(currentKey);
+        currentKey = k;
+        setActive(k);
+      }
+    } else if (msg.type === 'log') {
+      msg.text.split('\n').filter(l => l.trim()).forEach(l => addLog(l, msg.isError ? 'log-error' : ''));
+    } else if (msg.type === 'done') {
+      if (currentKey) setDone(currentKey);
+      addLog(msg.message, 'log-success');
+      src.close();
+      btn.disabled = false;
+      document.getElementById('pipelineDot').className = 'dot green';
+      document.getElementById('pipelineLabel').textContent = 'Pipeline idle';
+      document.getElementById('dlBtn').style.display = '';
+      document.getElementById('dlShortsBtn').style.display = '';
+      toast('Both videos rendered!');
+      refreshDash();
+    } else if (msg.type === 'error') {
+      if (currentKey) setError(currentKey);
+      addLog('ERROR: ' + msg.message, 'log-error');
+      src.close();
+      btn.disabled = false;
+      document.getElementById('pipelineDot').className = 'dot';
+      document.getElementById('pipelineLabel').textContent = 'Pipeline failed';
+      toast(msg.message, 'err');
+    }
+  };
+
+  src.onerror = () => {
+    addLog('Connection closed.', 'log-muted');
+    src.close();
+    btn.disabled = false;
+  };
+}
+
+// ── Storyboard ────────────────────────────────────────────────────────────────
+async function loadStoryboard() {
+  const res = await fetch('/api/storyboard');
+  if (!res.ok) {
+    document.getElementById('sbContent').innerHTML = '<div class="empty-state"><div class="empty-icon">⊞</div><p>No storyboard yet — run "Parse Script" first.</p></div>';
+    document.getElementById('sbMeta').textContent = '';
+    return;
+  }
+  const data = await res.json();
+  document.getElementById('sbMeta').textContent = `${data.scenes.length} scenes · ${data.totalDuration}s`;
+  document.getElementById('sbContent').innerHTML = `<div class="scenes-grid">${data.scenes.map(s => `
+    <div class="scene-card">
+      <div class="scene-preview" style="background:${s.backgroundColor}">
+        <div class="scene-onscreen">${s.onScreenText}</div>
+        <div class="scene-subtitle">${s.title}</div>
+      </div>
+      <div class="scene-meta">
+        <div class="scene-num">Scene ${s.sceneNumber}</div>
+        <div class="scene-dur">${s.duration}s</div>
+        <span class="scene-trans">${s.transition}</span>
+        <div class="scene-vo">${s.voiceover.substring(0, 90)}${s.voiceover.length > 90 ? '...' : ''}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+function dlVideo()   { window.location.href = '/api/download'; }
+function dlShorts()  { window.location.href = '/api/download/shorts'; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+refreshDash();
+setInterval(refreshDash, 10000);
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Environment variables — never push this
+.env
+
+# Dependencies
+node_modules/
+
+# Rendered video output — large files
+out/
+
+# Generated Remotion source files — auto-created on every run
+src/
+
+# Generated storyboard — auto-created on every run
+output/
+
+# Generated Remotion config — auto-created on every run
+remotion.config.js
+
+# Audio files — large binaries
+input/voiceover.mp3
+public/voiceover.mp3
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor folders
+.vscode/
+.idea/
